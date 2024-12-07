@@ -22,6 +22,7 @@ import javax.swing.table.DefaultTableModel;
 import possystem.database.Config;
 import possystem.model.ProductDetails;
 import java.sql.*;
+import possystem.main.LoginForm;
 
 public class Form_Sales extends javax.swing.JPanel {
     
@@ -373,6 +374,124 @@ public class Form_Sales extends javax.swing.JPanel {
             txtchange.setText("");
         }
     }
+    
+    private void handleSaleComplete() {
+    // Step 1: Validate if total and paid amount are valid
+    double totalAmount = Double.parseDouble(txttotal.getText());
+    double paidAmount = 0.0;
+    
+    try {
+        paidAmount = Double.parseDouble(txtpaidamount.getText());
+    } catch (NumberFormatException e) {
+        JOptionPane.showMessageDialog(this, "Invalid amount entered for paid amount.", "Error", JOptionPane.ERROR_MESSAGE);
+        return;
+    }
+
+    // Step 2: Check if paid amount is sufficient
+    if (paidAmount < totalAmount) {
+        JOptionPane.showMessageDialog(this, "Paid amount is less than total. Please enter a valid paid amount.", "Error", JOptionPane.ERROR_MESSAGE);
+        return;
+    }
+
+    // Step 3: Calculate change
+    double change = paidAmount - totalAmount;
+    txtchange.setText(String.format("%.2f", change));  // Display the change
+
+    // Step 4: Insert sale data into the database
+    try (Connection conn = Config.getConnection()) {
+        // Insert sale header (sales information)
+        String insertSaleQuery = "INSERT INTO sales (sales_id, sales_date, sales_time, total_amount, paid_amount, change_amount) VALUES (?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(insertSaleQuery)) {
+            ps.setString(1, salesID);
+            ps.setString(2, txtdate.getText());  // Current date
+            ps.setString(3, txttime.getText());  // Current time
+            ps.setDouble(4, totalAmount);
+            ps.setDouble(5, paidAmount);
+            ps.setDouble(6, change);
+            ps.executeUpdate();
+        }
+
+        // Insert sale items (product details)
+        String insertItemQuery = "INSERT INTO salesdetails (sales_id, product_id, product_name, quantity, unit_price, discount, subtotal) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(insertItemQuery)) {
+            for (int i = 0; i < tableModel.getRowCount(); i++) {
+                String productId = tableModel.getValueAt(i, 0).toString();
+                String productName = tableModel.getValueAt(i, 1).toString();
+                int quantity = Integer.parseInt(tableModel.getValueAt(i, 2).toString());
+                double unitPrice = Double.parseDouble(tableModel.getValueAt(i, 3).toString());
+                double discount = Double.parseDouble(tableModel.getValueAt(i, 4).toString());
+                double subtotal = Double.parseDouble(tableModel.getValueAt(i, 5).toString());
+
+                // Set values in prepared statement
+                ps.setString(1, salesID);
+                ps.setString(2, productId);
+                ps.setString(3, productName);
+                ps.setInt(4, quantity);
+                ps.setDouble(5, unitPrice);
+                ps.setDouble(6, discount);
+                ps.setDouble(7, subtotal);
+                ps.addBatch(); // Add to batch
+            }
+
+            // Execute batch update for sale items
+            ps.executeBatch();
+        }
+        
+        // Step 5: Show confirmation dialog and receipt
+        JOptionPane.showMessageDialog(this, "Sale completed successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+        
+        // Optionally, print or show the receipt (customize as needed)
+        generateReceipt(totalAmount, paidAmount, change);
+
+        // Step 6: Reset fields for the next sale
+        resetSale();
+    } catch (SQLException e) {
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(this, "Error completing sale: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+}
+
+private void generateReceipt(double totalAmount, double paidAmount, double change) {
+    // You can customize the receipt format, for now it's just a simple print statement
+    String receipt = "------ Receipt ------\n";
+    receipt += "Sales ID: " + salesID + "\n";
+    receipt += "Date: " + txtdate.getText() + "\n";
+    receipt += "Time: " + txttime.getText() + "\n";
+    receipt += "--------------------\n";
+
+    // Loop through the table to add products to the receipt
+    for (int i = 0; i < tableModel.getRowCount(); i++) {
+        receipt += "Product: " + tableModel.getValueAt(i, 1) + "\n";
+        receipt += "Quantity: " + tableModel.getValueAt(i, 2) + "\n";
+        receipt += "Unit Price: " + tableModel.getValueAt(i, 3) + "\n";
+        receipt += "Discount: " + tableModel.getValueAt(i, 4) + "\n";
+        receipt += "Subtotal: " + tableModel.getValueAt(i, 5) + "\n";
+        receipt += "--------------------\n";
+    }
+
+    receipt += "Total: " + totalAmount + "\n";
+    receipt += "Paid Amount: " + paidAmount + "\n";
+    receipt += "Change: " + change + "\n";
+    receipt += "--------------------\n";
+    
+    // You can either print this string or show it in a dialog
+    System.out.println(receipt);  // Debug: Print receipt to console
+    
+    // For example, to show in a dialog:
+    JOptionPane.showMessageDialog(this, receipt, "Receipt", JOptionPane.INFORMATION_MESSAGE);
+}
+
+private void resetSale() {
+    // Reset the sales form for the next transaction
+    tableModel.setRowCount(0);  // Clear table
+    txtsubtotal.setText("0.00");  // Reset subtotal
+    txttotal.setText("0.00");  // Reset total
+    txtpaidamount.setText("");  // Reset paid amount
+    txtchange.setText("");  // Reset change
+    salesID = generateSalesID();  // Generate a new Sales ID for the next transaction
+    txtsalesid.setText(salesID);  // Display the new Sales ID
+}
+
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -433,8 +552,8 @@ public class Form_Sales extends javax.swing.JPanel {
         btncomplete = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
         carttable = new javax.swing.JTable();
-        jButton3 = new javax.swing.JButton();
-        jButton4 = new javax.swing.JButton();
+        btnlogout = new javax.swing.JButton();
+        btnfullscreen = new javax.swing.JButton();
 
         setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
@@ -611,13 +730,13 @@ public class Form_Sales extends javax.swing.JPanel {
                         .addComponent(txtsearch, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 24, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addContainerGap())
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGap(18, 18, 18)
                         .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                        .addContainerGap(12, Short.MAX_VALUE))))
         );
 
         add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(8, 44, 1010, -1));
@@ -971,11 +1090,21 @@ public class Form_Sales extends javax.swing.JPanel {
 
         add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(6, 140, 1012, 280));
 
-        jButton3.setText("Logout");
-        add(jButton3, new org.netbeans.lib.awtextra.AbsoluteConstraints(814, 6, -1, -1));
+        btnlogout.setText("Logout");
+        btnlogout.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnlogoutActionPerformed(evt);
+            }
+        });
+        add(btnlogout, new org.netbeans.lib.awtextra.AbsoluteConstraints(814, 6, -1, -1));
 
-        jButton4.setText("fullscreen");
-        add(jButton4, new org.netbeans.lib.awtextra.AbsoluteConstraints(912, 6, -1, -1));
+        btnfullscreen.setText("fullscreen");
+        btnfullscreen.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnfullscreenActionPerformed(evt);
+            }
+        });
+        add(btnfullscreen, new org.netbeans.lib.awtextra.AbsoluteConstraints(912, 6, -1, -1));
     }// </editor-fold>//GEN-END:initComponents
 
     private void btncashActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btncashActionPerformed
@@ -987,17 +1116,33 @@ public class Form_Sales extends javax.swing.JPanel {
     }//GEN-LAST:event_btncardActionPerformed
 
     private void btncompleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btncompleteActionPerformed
-        // TODO add your handling code here:
+        handleSaleComplete();
     }//GEN-LAST:event_btncompleteActionPerformed
+
+    private void btnlogoutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnlogoutActionPerformed
+        // Close the current (main) form
+    java.awt.Window win = SwingUtilities.getWindowAncestor(this);
+    if (win instanceof JFrame) {
+        ((JFrame) win).dispose();  // Close the main JFrame
+    }
+    
+    // Create and show the login form
+    LoginForm loginForm = new LoginForm(); // Create an instance of the login form
+    loginForm.setVisible(true); // Make the login form visible
+    }//GEN-LAST:event_btnlogoutActionPerformed
+
+    private void btnfullscreenActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnfullscreenActionPerformed
+       
+    }//GEN-LAST:event_btnfullscreenActionPerformed
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btncard;
     private javax.swing.JButton btncash;
     private javax.swing.JButton btncomplete;
+    private javax.swing.JButton btnfullscreen;
+    private javax.swing.JButton btnlogout;
     private javax.swing.JTable carttable;
-    private javax.swing.JButton jButton3;
-    private javax.swing.JButton jButton4;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel11;
     private javax.swing.JLabel jLabel13;
