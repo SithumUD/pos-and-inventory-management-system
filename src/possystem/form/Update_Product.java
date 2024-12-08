@@ -5,24 +5,182 @@
 package possystem.form;
 
 import java.awt.Color;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.sql.*;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import possystem.database.Config;
 
 /**
  *
  * @author sithu
  */
 public class Update_Product extends javax.swing.JFrame {
+    
+    private String productid;
 
     /**
      * Creates new form Update_Product
      */
     // Default no-argument constructor
     public Update_Product() {
-        this(new String[] {"", "", "", "", "", ""}); // Pass empty default data
+        this(new String[]{"", "", "", "", "", ""}); // Pass empty default data
+    }
+
+    public Update_Product(String[] productDetails) {
+        try {
+            initComponents();
+            
+            setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Prevent the app from closing when JFrame is closed
+
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+            
+            // Retrieve categories from the database and set in JComboBox
+        Connection conn = Config.getConnection(); // Make sure to replace with your DB connection method
+        String query = "SELECT category_name FROM categories"; // Adjust your table and column names
+        PreparedStatement ps = conn.prepareStatement(query);
+        ResultSet rs = ps.executeQuery();
+
+        // Create a DefaultComboBoxModel to hold the categories
+        DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
+        
+        while (rs.next()) {
+            model.addElement(rs.getString("category_name")); // Assuming 'category_name' is the column name
+        }
+        
+        txtcategory.setModel(model); // Set the model with the categories
+        
+        productid = productDetails[0];
+
+            txtname.setText(productDetails[1]);
+            txtdec.setText(productDetails[2]);
+            txtcategory.setSelectedItem(productDetails[3]);
+            txtbrand.setText(productDetails[4]);
+            txtcost.setText(productDetails[5]);
+            txtsellingprice.setText(productDetails[6]);
+            txtdiscount.setText(productDetails[7]);
+            txtbarcode.setText(productDetails[8]);
+            txtreorderlevel.setText(productDetails[9]);
+            // Convert productDetails[10] to an integer and set it
+            int quantity = Integer.parseInt(productDetails[10]); // Parse the string to an integer
+            txtquantity.setValue(quantity); // Set the value to the JSpinner
+            txtweight.setText(productDetails[11]);
+            txtuom.setSelectedItem(productDetails[12]);
+            txtvolume.setText(productDetails[13]);
+            
+            if(productDetails[14] == "true"){
+                cbactive.setSelected(true);
+            }
+            else{
+                cbactive.setSelected(false);
+            }
+            if(productDetails[15] == "true"){
+                cbavailable.setSelected(true);
+            }
+            else{
+                cbavailable.setSelected(false);
+            }
+
+            Date expdate = formatter.parse(productDetails[17]);
+            dtpexpdate.setDate(expdate);
+            Date productdate = formatter.parse(productDetails[16]);
+            dtpproductdate.setDate(productdate);
+            Date discountstart = formatter.parse(productDetails[18]);
+            dtpdiscountstart.setDate(discountstart);
+            Date discountend = formatter.parse(productDetails[19]);
+            dtpdiscountend.setDate(discountend);
+        } catch (SQLException | ParseException ex) {
+            Logger.getLogger(Update_Product.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
-    public Update_Product(String[] productDetails) {
-        initComponents();
+    private void update() {
+    try {
+        // Get the data from the form fields
+        String name = txtname.getText();
+        String description = txtdec.getText();
+        String category = (String) txtcategory.getSelectedItem();
+        String brand = txtbrand.getText();
+        String cost = txtcost.getText();
+        String sellingPrice = txtsellingprice.getText();
+        String discount = txtdiscount.getText();
+        String barcode = txtbarcode.getText();
+        String reorderLevel = txtreorderlevel.getText();
+        int quantity = (Integer) txtquantity.getValue();
+        String weight = txtweight.getText();
+        String uom = (String) txtuom.getSelectedItem();
+        String volume = txtvolume.getText();
+        boolean isActive = cbactive.isSelected();
+        boolean isAvailable = cbavailable.isSelected();
+        Date expDate = dtpexpdate.getDate();
+        Date productDate = dtpproductdate.getDate();
+        Date discountStart = dtpdiscountstart.getDate();
+        Date discountEnd = dtpdiscountend.getDate();
+
+        // Convert dates to strings (yyyy-MM-dd format)
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+        String expDateStr = formatter.format(expDate);
+        String productDateStr = formatter.format(productDate);
+        String discountStartStr = formatter.format(discountStart);
+        String discountEndStr = formatter.format(discountEnd);
+
+        // Prepare the SQL UPDATE query
+        String query = "UPDATE products SET "
+                + "product_name = ?, description = ?, category = ?, brand = ?, purchase_price = ?, selling_price = ?, "
+                + "discount = ?, barcode = ?, reorder_level = ?, quantity = ?, weight = ?, unit_of_measure = ?, "
+                + "volume = ?, is_active = ?, is_available = ?, expiration_date = ?, production_date = ?, "
+                + "discount_start_date = ?, discount_end_date = ? WHERE product_id = ?";
+
+        // Prepare the database connection and statement
+        Connection conn = Config.getConnection(); // Your database connection method
+        PreparedStatement ps = conn.prepareStatement(query);
+
+        // Set the parameters for the SQL query
+        ps.setString(1, name);
+        ps.setString(2, description);
+        ps.setString(3, category);
+        ps.setString(4, brand);
+        ps.setString(5, cost);
+        ps.setString(6, sellingPrice);
+        ps.setString(7, discount);
+        ps.setString(8, barcode);
+        ps.setString(9, reorderLevel);
+        ps.setInt(10, quantity);
+        ps.setString(11, weight);
+        ps.setString(12, uom);
+        ps.setString(13, volume);
+        ps.setBoolean(14, isActive);
+        ps.setBoolean(15, isAvailable);
+        ps.setString(16, expDateStr);
+        ps.setString(17, productDateStr);
+        ps.setString(18, discountStartStr);
+        ps.setString(19, discountEndStr);
+        ps.setString(20, productid); // Use the product ID from productDetails[0]
+
+        // Execute the update
+        int rowsUpdated = ps.executeUpdate();
+
+        if (rowsUpdated > 0) {
+            JOptionPane.showMessageDialog(this, "Product updated successfully!");
+        } else {
+            JOptionPane.showMessageDialog(this, "Product update failed.");
+        }
+
+        // Close the resources
+        ps.close();
+        conn.close();
+
+    } catch (SQLException ex) {
+        Logger.getLogger(Update_Product.class.getName()).log(Level.SEVERE, null, ex);
+        JOptionPane.showMessageDialog(this, "Error updating product: " + ex.getMessage());
     }
+}
+
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -279,7 +437,7 @@ public class Update_Product extends javax.swing.JFrame {
                 .addComponent(btncancel, javax.swing.GroupLayout.PREFERRED_SIZE, 118, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
                 .addComponent(btnsave, javax.swing.GroupLayout.PREFERRED_SIZE, 118, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(243, 243, 243))
+                .addGap(242, 242, 242))
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -346,11 +504,11 @@ public class Update_Product extends javax.swing.JFrame {
                         .addComponent(jLabel26))
                     .addComponent(dtpdiscountstart, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(dtpdiscountend, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(86, 86, 86)
+                .addGap(43, 43, 43)
                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnsave)
                     .addComponent(btncancel))
-                .addContainerGap(141, Short.MAX_VALUE))
+                .addContainerGap(184, Short.MAX_VALUE))
         );
 
         jScrollPane1.setViewportView(jPanel3);
@@ -435,15 +593,15 @@ public class Update_Product extends javax.swing.JFrame {
     }//GEN-LAST:event_cbactiveActionPerformed
 
     private void btngeneratebarcodeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btngeneratebarcodeActionPerformed
-        
+
     }//GEN-LAST:event_btngeneratebarcodeActionPerformed
 
     private void btnsaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnsaveActionPerformed
-        
+update();
     }//GEN-LAST:event_btnsaveActionPerformed
 
     private void btncancelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btncancelActionPerformed
-        // TODO add your handling code here:
+        this.dispose();
     }//GEN-LAST:event_btncancelActionPerformed
 
     /**

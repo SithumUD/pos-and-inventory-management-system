@@ -597,7 +597,7 @@ private void updateproduct(){
     }//GEN-LAST:event_jCheckBox1ActionPerformed
 
     private void btnupdateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnupdateActionPerformed
-        // TODO add your handling code here:
+        updateproduct();
     }//GEN-LAST:event_btnupdateActionPerformed
 
 

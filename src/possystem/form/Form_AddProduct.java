@@ -31,6 +31,8 @@ import java.awt.print.PageFormat;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -45,6 +47,8 @@ public class Form_AddProduct extends javax.swing.JPanel {
      */
     public Form_AddProduct() {
         initComponents();
+        
+        loadCategories();
     }
 
     /**
@@ -426,30 +430,23 @@ public class Form_AddProduct extends javax.swing.JPanel {
     }// </editor-fold>//GEN-END:initComponents
 
     private void loadCategories() {
-        // SQL query to retrieve categories
-        String sql = "SELECT category_name FROM categories"; // Assuming you have a 'categories' table with 'category_name' column
-
-        List<String> categories = new ArrayList<>();
-
-        try (Connection conn = Config.getConnection(); // Assuming DatabaseConnection is your utility class to connect to DB
-                 Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
-
-            // Loop through the result set and add each category to the list
+        try {
+            // Retrieve categories from the database and set in JComboBox
+            Connection conn = Config.getConnection(); // Make sure to replace with your DB connection method
+            String query = "SELECT category_name FROM categories"; // Adjust your table and column names
+            PreparedStatement ps = conn.prepareStatement(query);
+            ResultSet rs = ps.executeQuery();
+            
+            // Create a DefaultComboBoxModel to hold the categories
+            DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
+            
             while (rs.next()) {
-                categories.add(rs.getString("category_name"));
+                model.addElement(rs.getString("category_name")); // Assuming 'category_name' is the column name
             }
-
-            // Check if there are categories retrieved
-            if (!categories.isEmpty()) {
-                // Populate the JComboBox with the retrieved categories
-                DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>(categories.toArray(new String[0]));
-                txtcategory.setModel(model);
-            } else {
-                JOptionPane.showMessageDialog(this, "No categories found.", "Info", JOptionPane.INFORMATION_MESSAGE);
-            }
-
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Error fetching categories: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+            
+            txtcategory.setModel(model);
+        } catch (SQLException ex) {
+            Logger.getLogger(Form_AddProduct.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
