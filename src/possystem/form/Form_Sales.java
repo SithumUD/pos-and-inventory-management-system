@@ -5,6 +5,8 @@
 package possystem.form;
 
 import java.awt.Color;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import javax.swing.*;
@@ -41,6 +43,9 @@ public class Form_Sales extends javax.swing.JPanel {
         btncard.setEnabled(false);
         setupChangeCalculation();
         salesID = generateSalesID();
+        txtbarcodevalue.setEditable(false);
+        txtbarcodevalue.requestFocus();
+        barcoderead();
         
         if (checkSalesIDExists(salesID)) {
             // If it exists, generate a new ID
@@ -93,6 +98,41 @@ public class Form_Sales extends javax.swing.JPanel {
                 }
             }
         });
+        
+        //txtbarcodevalue.addFocusListener(new FocusAdapter() {
+  // @Override
+  // public void focusLost(FocusEvent e) {
+        //Log when focus is lost from the barcode field
+     //  System.out.println("Focus lost from barcode field.");
+        // If the barcode field loses focus, immediately set focus back
+     //   txtbarcodevalue.requestFocus();
+     //  System.out.println("Focus returned to barcode field.");
+  //  }
+//});
+
+// Optional: Add FocusListener to other fields to demonstrate focus behavior
+txtsearch.addFocusListener(new FocusAdapter() {
+    @Override
+    public void focusLost(FocusEvent e) {
+        // Log when focus is lost from the search field
+        System.out.println("Focus lost from search field.");
+        // If focus lost on product name, set focus back to barcode
+        txtbarcodevalue.requestFocus();
+        System.out.println("Focus returned to barcode field.");
+    }
+});
+
+//txtpaidamount.addFocusListener(new FocusAdapter() {
+   // @Override
+   // public void focusLost(FocusEvent e) {
+        // Log when focus is lost from the paid amount field
+       // System.out.println("Focus lost from paid amount field.");
+        // If focus lost on price, set focus back to barcode
+       // txtbarcodevalue.requestFocus();
+       // System.out.println("Focus returned to barcode field.");
+   // }
+//});
+
         
     }
     
@@ -178,6 +218,68 @@ public class Form_Sales extends javax.swing.JPanel {
             }
         });
     }
+    
+    private void barcoderead(){
+        
+        txtbarcodevalue.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                txtbarcodevalue.requestFocus();
+                String barcode = txtbarcodevalue.getText();
+                // Check if the barcode is not empty and length is valid
+            if (barcode.length() > 0) {
+                // Call a method to fetch product name from the database
+                getProductNameByBarcode(barcode);
+            }
+            }
+        });
+    }
+    
+    private void getProductNameByBarcode(String barcode) {
+    // Database connection variable
+    Connection conn = null;
+    PreparedStatement stmt = null;
+    ResultSet rs = null;
+
+    try {
+        // Get the connection from the Config class
+        conn = Config.getConnection();
+
+        // SQL query to find product by barcode
+        String query = "SELECT product_name FROM products WHERE product_id = ?";  // Assuming barcode is the product_id
+        stmt = conn.prepareStatement(query);
+        stmt.setString(1, barcode); // Set barcode value in the query
+
+        // Execute the query
+        rs = stmt.executeQuery();
+
+        // Check if a result was returned
+        if (rs.next()) {
+            // If found, get the product name
+            String productName = rs.getString("product_name");
+            int quantity = 1;
+
+            addToSalesTable(barcode,productName,quantity); 
+            
+        } else {
+            // If no matching barcode, show a message or do something else
+            JOptionPane.showMessageDialog(this, "Product not found.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+        // Handle any database errors
+    } finally {
+        // Close the database resources
+        Config.closeConnection(conn);
+        try {
+            if (rs != null) rs.close();
+            if (stmt != null) stmt.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
     
     private void addToSalesTable(String productId, String productName, int quantity) {
         // Check if the product already exists in the sales table
@@ -522,6 +624,7 @@ private void resetSale() {
         jLabel30 = new javax.swing.JLabel();
         jLabel15 = new javax.swing.JLabel();
         txtsearch = new javax.swing.JTextField();
+        txtbarcodevalue = new javax.swing.JTextField();
         jLabel1 = new javax.swing.JLabel();
         jPanel2 = new javax.swing.JPanel();
         jPanel3 = new javax.swing.JPanel();
@@ -707,9 +810,11 @@ private void resetSale() {
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addComponent(jLabel15)
                         .addGap(18, 18, 18)
-                        .addComponent(txtsearch, javax.swing.GroupLayout.PREFERRED_SIZE, 273, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(txtsearch, javax.swing.GroupLayout.PREFERRED_SIZE, 273, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(40, 40, 40)
+                        .addComponent(txtbarcodevalue, javax.swing.GroupLayout.PREFERRED_SIZE, 135, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 229, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 54, Short.MAX_VALUE)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jPanel4, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
@@ -727,7 +832,8 @@ private void resetSale() {
                     .addComponent(jPanel18, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                         .addComponent(jLabel15)
-                        .addComponent(txtsearch, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addComponent(txtsearch, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(txtbarcodevalue, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
@@ -1181,6 +1287,7 @@ private void resetSale() {
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JList<String> searchlist;
+    private javax.swing.JTextField txtbarcodevalue;
     private javax.swing.JLabel txtchange;
     private javax.swing.JLabel txtdate;
     private javax.swing.JTextField txtpaidamount;

@@ -14,12 +14,31 @@ import java.util.UUID;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JOptionPane;
 import possystem.database.Config;
+import java.io.File;
+import java.io.IOException;
+import javax.imageio.ImageIO;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.client.j2se.MatrixToImageConfig;
+import com.google.zxing.oned.Code128Writer;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.print.PageFormat;
+import java.awt.print.Printable;
+import java.awt.print.PrinterException;
+import java.awt.print.PrinterJob;
 
 /**
  *
  * @author sithu
  */
 public class Form_AddProduct extends javax.swing.JPanel {
+
+    private String barcode;
 
     /**
      * Creates new form Form_AddProduct
@@ -409,18 +428,17 @@ public class Form_AddProduct extends javax.swing.JPanel {
     private void loadCategories() {
         // SQL query to retrieve categories
         String sql = "SELECT category_name FROM categories"; // Assuming you have a 'categories' table with 'category_name' column
-        
+
         List<String> categories = new ArrayList<>();
-        
+
         try (Connection conn = Config.getConnection(); // Assuming DatabaseConnection is your utility class to connect to DB
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+                 Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
 
             // Loop through the result set and add each category to the list
             while (rs.next()) {
                 categories.add(rs.getString("category_name"));
             }
-            
+
             // Check if there are categories retrieved
             if (!categories.isEmpty()) {
                 // Populate the JComboBox with the retrieved categories
@@ -434,7 +452,7 @@ public class Form_AddProduct extends javax.swing.JPanel {
             JOptionPane.showMessageDialog(this, "Error fetching categories: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-    
+
     private void txtcategoryActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtcategoryActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_txtcategoryActionPerformed
@@ -452,12 +470,65 @@ public class Form_AddProduct extends javax.swing.JPanel {
     }//GEN-LAST:event_btncancelActionPerformed
 
     private void btnprintbarcodeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnprintbarcodeActionPerformed
-        // TODO add your handling code here:
+        try {
+            printBarcode(barcode);
+        } catch (PrinterException e) {
+            e.printStackTrace();
+        }
     }//GEN-LAST:event_btnprintbarcodeActionPerformed
 
+    private static void printBarcode(String productCode) throws PrinterException {
+        PrinterJob printerJob = PrinterJob.getPrinterJob();
+        printerJob.setPrintable(new Printable() {
+            @Override
+            public int print(Graphics g, PageFormat pageFormat, int pageIndex) {
+                if (pageIndex > 0) {
+                    return NO_SUCH_PAGE;
+                }
+
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
+
+                try {
+                    // Barcode dimensions
+                    int barcodeWidth = 300;
+                    int barcodeHeight = 100;
+
+                    // Generate barcode
+                    Code128Writer barcodeWriter = new Code128Writer();
+                    BitMatrix bitMatrix = barcodeWriter.encode(productCode, BarcodeFormat.CODE_128, barcodeWidth, barcodeHeight);
+
+                    // Save barcode as temporary image
+                    File barcodeImageFile = new File("barcode.png");
+                    MatrixToImageWriter.writeToPath(bitMatrix, "PNG", barcodeImageFile.toPath());
+
+                    // Load the barcode image
+                    Image barcodeImage = ImageIO.read(barcodeImageFile);
+
+                    // Draw the barcode on the label
+                    g2d.drawImage(barcodeImage, 10, 10, barcodeWidth, barcodeHeight, null);
+
+                    // Add additional label information if needed
+                    g2d.setFont(new Font("Arial", Font.PLAIN, 12));
+                    g2d.drawString("Product Code: " + productCode, 10, barcodeHeight + 20);
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                return PAGE_EXISTS;
+            }
+        });
+
+        // Show print dialog and print
+        if (printerJob.printDialog()) {
+            printerJob.print();
+        }
+    }
+    
     private void btngeneratebarcodeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btngeneratebarcodeActionPerformed
-        String barcode = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
-        
+        barcode = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+
         txtbarcode.setText(barcode);
     }//GEN-LAST:event_btngeneratebarcodeActionPerformed
 
@@ -477,14 +548,14 @@ public class Form_AddProduct extends javax.swing.JPanel {
         String volume = txtvolume.getText().trim();
         boolean active = cbactive.isSelected();
         boolean available = cbavailable.isSelected();
-        
-        // Use SimpleDateFormat to format dates
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
-    String productDate = (dtpproductdate.getDate() != null) ? sdf.format(dtpproductdate.getDate()) : null;
-    String expDate = (dtpexpdate.getDate() != null) ? sdf.format(dtpexpdate.getDate()) : null;
-    String discountStart = (dtpdiscountstart.getDate() != null) ? sdf.format(dtpdiscountstart.getDate()) : null;
-    String discountEnd = (dtpdiscountend.getDate() != null) ? sdf.format(dtpdiscountend.getDate()) : null;
+        // Use SimpleDateFormat to format dates
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+
+        String productDate = (dtpproductdate.getDate() != null) ? sdf.format(dtpproductdate.getDate()) : null;
+        String expDate = (dtpexpdate.getDate() != null) ? sdf.format(dtpexpdate.getDate()) : null;
+        String discountStart = (dtpdiscountstart.getDate() != null) ? sdf.format(dtpdiscountstart.getDate()) : null;
+        String discountEnd = (dtpdiscountend.getDate() != null) ? sdf.format(dtpdiscountend.getDate()) : null;
 
         // Database connection setup
         Connection conn = null;
@@ -495,8 +566,8 @@ public class Form_AddProduct extends javax.swing.JPanel {
             conn = Config.getConnection(); // Assuming you have a method to get the connection
 
             // SQL Insert Statement to add product data into the database
-            String sql = "INSERT INTO products (product_id, product_name, category, brand, description, purchase_price, selling_price, discount, discount_start_date, discount_end_date, quantity, reorder_level, unit_of_measure, barcode, weight, volume, is_active, is_available, production_date, expiration_date) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO products (product_id, product_name, category, brand, description, purchase_price, selling_price, discount, discount_start_date, discount_end_date, quantity, reorder_level, unit_of_measure, barcode, weight, volume, is_active, is_available, production_date, expiration_date) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
             pst = conn.prepareStatement(sql);
             pst.setString(1, barcode);
@@ -519,8 +590,6 @@ public class Form_AddProduct extends javax.swing.JPanel {
             pst.setBoolean(18, available);
             pst.setString(19, productDate);
             pst.setString(20, expDate);
-            
-            
 
             // Execute the statement
             int rowsAffected = pst.executeUpdate();

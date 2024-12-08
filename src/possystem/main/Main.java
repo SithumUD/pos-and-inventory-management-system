@@ -10,6 +10,7 @@ import possystem.form.Form_AddProduct;
 import possystem.form.Form_Dashboard;
 import possystem.form.Form_Empty;
 import possystem.form.Form_Sales;
+import possystem.form.View_Product;
 import possystem.menu.EventMenuSelected;
 
 /**
@@ -40,6 +41,8 @@ public class Main extends javax.swing.JFrame {
                     showForm(new Form_Sales());
                 }else if(index == 2 && indexSubMenu == 1){
                     showForm(new Form_AddProduct());
+                }else if(index == 2 && indexSubMenu == 2){
+                    showForm(new View_Product());
                 }
                 else {
                     showForm(new Form_Empty(index + " " + indexSubMenu));
