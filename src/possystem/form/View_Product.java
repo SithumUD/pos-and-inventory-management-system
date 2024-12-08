@@ -333,6 +333,27 @@ private boolean deleteProductOnly(String productCode) {
     }
 }
 
+private void updateproduct(){
+    int selectedRow = tbproduct.getSelectedRow();
+
+        if (selectedRow != -1) {
+            // Retrieve the product code (or any unique identifier)
+            String productCode = (String) tbproduct.getValueAt(selectedRow, 0);
+
+            // Retrieve full product details from the database
+            String[] fullProductDetails = getFullProductDetails(productCode);
+
+            if (fullProductDetails != null) {
+                Update_Product update_product = new Update_Product(fullProductDetails);
+                update_product.setVisible(true);
+            } else {
+                JOptionPane.showMessageDialog(this, "Product details not found.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, "Please select a product to view details.", "No Product Selected", JOptionPane.WARNING_MESSAGE);
+        }
+}
+
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -361,14 +382,14 @@ private boolean deleteProductOnly(String productCode) {
         jScrollPane1 = new javax.swing.JScrollPane();
         tbproduct = new javax.swing.JTable();
         jButton1 = new javax.swing.JButton();
-        jButton2 = new javax.swing.JButton();
+        btnupdate = new javax.swing.JButton();
         btnview = new javax.swing.JButton();
 
         jPanel1.setBackground(new java.awt.Color(255, 255, 255));
 
         jLabel1.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
         jLabel1.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel1.setText("Add Products");
+        jLabel1.setText("Update Products");
 
         jLabel2.setText("Category");
 
@@ -422,7 +443,7 @@ private boolean deleteProductOnly(String productCode) {
                         .addComponent(jCheckBox1)
                         .addGap(58, 58, 58)
                         .addComponent(jCheckBox2)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 63, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 286, Short.MAX_VALUE)
                         .addComponent(jLabel6)
                         .addGap(18, 18, 18)
                         .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -485,7 +506,12 @@ private boolean deleteProductOnly(String productCode) {
             }
         });
 
-        jButton2.setText("UPDATE");
+        btnupdate.setText("UPDATE");
+        btnupdate.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnupdateActionPerformed(evt);
+            }
+        });
 
         btnview.setText("VIEW");
         btnview.addActionListener(new java.awt.event.ActionListener() {
@@ -518,7 +544,7 @@ private boolean deleteProductOnly(String productCode) {
                 .addGap(0, 0, Short.MAX_VALUE)
                 .addComponent(btnview)
                 .addGap(18, 18, 18)
-                .addComponent(jButton2)
+                .addComponent(btnupdate)
                 .addGap(18, 18, 18)
                 .addComponent(jButton1)
                 .addGap(41, 41, 41))
@@ -537,7 +563,7 @@ private boolean deleteProductOnly(String productCode) {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 56, Short.MAX_VALUE)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton1)
-                    .addComponent(jButton2)
+                    .addComponent(btnupdate)
                     .addComponent(btnview))
                 .addGap(47, 47, 47))
         );
@@ -570,11 +596,15 @@ private boolean deleteProductOnly(String productCode) {
         // TODO add your handling code here:
     }//GEN-LAST:event_jCheckBox1ActionPerformed
 
+    private void btnupdateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnupdateActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_btnupdateActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnupdate;
     private javax.swing.JButton btnview;
     private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton2;
     private javax.swing.JCheckBox jCheckBox1;
     private javax.swing.JCheckBox jCheckBox2;
     private javax.swing.JComboBox<String> jComboBox1;
