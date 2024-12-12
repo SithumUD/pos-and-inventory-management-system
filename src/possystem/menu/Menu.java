@@ -34,11 +34,13 @@ public class Menu extends JPanel {
         add(scroll);
         addTitle("MAIN");
         addMenuItem(new ModelMenuItem(GoogleMaterialDesignIcon.DASHBOARD, "Dashboard"));
-        addMenuItem(new ModelMenuItem(GoogleMaterialDesignIcon.DASHBOARD, "Sales"));
+        addMenuItem(new ModelMenuItem(GoogleMaterialDesignIcon.DASHBOARD, "Sales", "Process Sales", "Transaction History"));
         //addTitle("WEB APPS");
         addMenuItem(new ModelMenuItem(GoogleMaterialDesignIcon.MAIL_OUTLINE, "Products", "Add Products", "View Products"));
-        addMenuItem(new ModelMenuItem(GoogleMaterialDesignIcon.MESSAGE, "Inventory"));
-        addMenuItem(new ModelMenuItem(GoogleMaterialDesignIcon.PERM_CONTACT_CALENDAR, "Staff"));
+        addMenuItem(new ModelMenuItem(GoogleMaterialDesignIcon.MESSAGE, "Inventory", "Stock Management", "Low Stock Alerts", "Expiration Date Tracking"));
+        addMenuItem(new ModelMenuItem(GoogleMaterialDesignIcon.PERM_CONTACT_CALENDAR, "Staff", "Add Staff", "Staff Sales Performance"));
+        addMenuItem(new ModelMenuItem(GoogleMaterialDesignIcon.PERM_CONTACT_CALENDAR, "Reports", "Sales Reports", "Inventory Reports", "Profit/Loss Reports", "Sales by Category"));
+        addMenuItem(new ModelMenuItem(GoogleMaterialDesignIcon.PERM_CONTACT_CALENDAR, "Settings"));
         //addTitle("COMPONENT");
         //addMenuItem(new ModelMenuItem(GoogleMaterialDesignIcon.WHATSHOT, "UI Kit", "Accordion", "Alerts", "Badges", "Breadcrumbs", "Buttons", "Button group"));
         //addMenuItem(new ModelMenuItem(GoogleMaterialDesignIcon.DIRECTIONS_BIKE, "Advanced UI", "Cropper", "Owl Carousel", "Sweet Alert"));

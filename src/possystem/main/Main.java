@@ -10,6 +10,7 @@ import possystem.form.Form_AddProduct;
 import possystem.form.Form_Dashboard;
 import possystem.form.Form_Empty;
 import possystem.form.Form_Sales;
+import possystem.form.Form_Sales_History;
 import possystem.form.View_Product;
 import possystem.menu.EventMenuSelected;
 
@@ -37,8 +38,10 @@ public class Main extends javax.swing.JFrame {
             public void menuSelected(int index, int indexSubMenu) {
                 if (index == 0 && indexSubMenu == 0) {
                     showForm(new Form_Dashboard());
-                }else if(index == 1 && indexSubMenu == 0){
+                }else if(index == 1 && indexSubMenu == 1){
                     showForm(new Form_Sales());
+                }else if(index == 1 && indexSubMenu == 2){
+                    showForm(new Form_Sales_History());
                 }else if(index == 2 && indexSubMenu == 1){
                     showForm(new Form_AddProduct());
                 }else if(index == 2 && indexSubMenu == 2){
@@ -80,7 +83,6 @@ public class Main extends javax.swing.JFrame {
         body = new javax.swing.JPanel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setName("frame0"); // NOI18N
 
         background.setBackground(new java.awt.Color(245, 245, 245));
 
