@@ -12,6 +12,9 @@ import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 import possystem.database.Config;
 import java.sql.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
@@ -26,6 +29,53 @@ public class View_Product extends javax.swing.JPanel {
      */
     public View_Product() {
         initComponents();
+        
+        loadCategories();
+        
+        isActiveCheckBox.setSelected(true); // For 'isActive' checkbox
+isAvailableCheckBox.setSelected(true); // For 'isAvailable' checkbox
+
+// Assuming the checkboxes are named isActiveCheckBox and isAvailableCheckBox
+isActiveCheckBox.addItemListener(e -> updateTable());
+isAvailableCheckBox.addItemListener(e -> updateTable());
+        
+        // Adding ActionListener to the category ComboBox
+cbcategory.addActionListener(e -> filterByCategory());
+
+// Adding DocumentListeners to the quantity fields for real-time updates
+txtMinQuantity.getDocument().addDocumentListener(new DocumentListener() {
+    @Override
+    public void insertUpdate(DocumentEvent e) {
+        filterByQuantity();
+    }
+
+    @Override
+    public void removeUpdate(DocumentEvent e) {
+        filterByQuantity();
+    }
+
+    @Override
+    public void changedUpdate(DocumentEvent e) {
+        filterByQuantity();
+    }
+});
+
+txtMaxQuantity.getDocument().addDocumentListener(new DocumentListener() {
+    @Override
+    public void insertUpdate(DocumentEvent e) {
+        filterByQuantity();
+    }
+
+    @Override
+    public void removeUpdate(DocumentEvent e) {
+        filterByQuantity();
+    }
+
+    @Override
+    public void changedUpdate(DocumentEvent e) {
+        filterByQuantity();
+    }
+});
 
         // Columns to display in the main table
         String[] columnNames = {
@@ -354,6 +404,142 @@ private void updateproduct(){
         }
 }
 
+private void loadCategories() {
+    try {
+        // Retrieve categories from the database and set in JComboBox
+        Connection conn = Config.getConnection(); // Replace with your DB connection method
+        String query = "SELECT category_name FROM categories"; // Adjust your table and column names
+        PreparedStatement ps = conn.prepareStatement(query);
+        ResultSet rs = ps.executeQuery();
+        
+        // Create a DefaultComboBoxModel to hold the categories
+        DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
+        
+        // Add "Any" as the first option
+        model.addElement("Any");
+        
+        // Populate the model with categories from the database
+        while (rs.next()) {
+            model.addElement(rs.getString("category_name")); // Assuming 'category_name' is the column name
+        }
+        
+        // Set the model for the combo box
+        cbcategory.setModel(model);
+        
+        // Set "Any" as the default selected option
+        cbcategory.setSelectedIndex(0);
+        
+    } catch (SQLException ex) {
+        Logger.getLogger(Form_AddProduct.class.getName()).log(Level.SEVERE, null, ex);
+    }
+}
+
+
+private void filterByCategory() {
+    // Get the selected category and trigger the table update
+    String selectedCategory = cbcategory.getSelectedItem().toString();
+    updateTable();
+}
+
+private void filterByQuantity() {
+    // Read the minimum and maximum quantity values and update the table
+    updateTable();
+}
+
+private void updateTable() {
+    DefaultTableModel model = (DefaultTableModel) tbproduct.getModel();
+    model.setRowCount(0);  // Clear existing rows
+
+    String searchQuery = txtsearch.getText().trim();
+    String selectedCategory = cbcategory.getSelectedItem().toString();
+    String minQuantityStr = txtMinQuantity.getText().trim();
+    String maxQuantityStr = txtMaxQuantity.getText().trim();
+    Integer minQuantity = minQuantityStr.isEmpty() ? null : Integer.parseInt(minQuantityStr);
+    Integer maxQuantity = maxQuantityStr.isEmpty() ? null : Integer.parseInt(maxQuantityStr);
+
+    // Check if the checkboxes are selected
+    boolean isActiveSelected = isActiveCheckBox.isSelected(); // For 'isActive' checkbox
+    boolean isAvailableSelected = isAvailableCheckBox.isSelected(); // For 'isAvailable' checkbox
+
+    StringBuilder query = new StringBuilder("SELECT * FROM products WHERE (product_name LIKE ? OR product_id LIKE ?)");
+
+    // Add category filter if not "Any"
+    if (!selectedCategory.equals("Any")) {
+        query.append(" AND category = ?");
+    }
+
+    // Add quantity filters
+    if (minQuantity != null) {
+        query.append(" AND quantity >= ?");
+    }
+    if (maxQuantity != null) {
+        query.append(" AND quantity <= ?");
+    }
+
+    // Add filter for 'isActive' if the checkbox is selected (1 for true, 0 for false)
+    if (isActiveSelected) {
+        query.append(" AND is_active = 1");  // Only active products (isActive = 1)
+    }else{
+        query.append(" AND is_active = 0");
+    }
+
+    // Add filter for 'isAvailable' if the checkbox is selected (1 for true, 0 for false)
+    if (isAvailableSelected) {
+        query.append(" AND is_available = 1");  // Only available products (isAvailable = 1)
+    }else{
+        query.append(" AND is_available = 0");
+    }
+
+    try (Connection conn = Config.getConnection(); PreparedStatement stmt = conn.prepareStatement(query.toString())) {
+        int paramIndex = 1;
+
+        // Set search query parameters
+        stmt.setString(paramIndex++, "%" + searchQuery + "%");
+        stmt.setString(paramIndex++, "%" + searchQuery + "%");
+
+        // Set category filter if applicable
+        if (!selectedCategory.equals("Any")) {
+            stmt.setString(paramIndex++, selectedCategory);
+        }
+
+        // Set quantity range filters
+        if (minQuantity != null) {
+            stmt.setInt(paramIndex++, minQuantity);
+        }
+        if (maxQuantity != null) {
+            stmt.setInt(paramIndex++, maxQuantity);
+        }
+
+        // Execute query and populate table
+        try (ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                String productCode = rs.getString("product_id");
+                String name = rs.getString("product_name");
+                String category = rs.getString("category");
+                double sellingPrice = rs.getDouble("selling_price");
+                int quantityInStock = rs.getInt("quantity");
+                String expirationDate = rs.getString("expiration_date");
+
+                // Add filtered product to the table
+                model.addRow(new Object[]{
+                        productCode, name, category, sellingPrice, quantityInStock, expirationDate
+                });
+            }
+        }
+    } catch (SQLException e) {
+        System.out.println("Error fetching filtered data: " + e.getMessage());
+    }
+}
+
+
+
+
+
+
+
+
+
+
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -374,10 +560,13 @@ private void updateproduct(){
         txtsearch = new javax.swing.JTextField();
         jComboBox1 = new javax.swing.JComboBox<>();
         jLabel6 = new javax.swing.JLabel();
-        jComboBox2 = new javax.swing.JComboBox<>();
-        jComboBox3 = new javax.swing.JComboBox<>();
-        jCheckBox1 = new javax.swing.JCheckBox();
-        jCheckBox2 = new javax.swing.JCheckBox();
+        cbcategory = new javax.swing.JComboBox<>();
+        isActiveCheckBox = new javax.swing.JCheckBox();
+        isAvailableCheckBox = new javax.swing.JCheckBox();
+        txtMinQuantity = new javax.swing.JTextField();
+        jLabel3 = new javax.swing.JLabel();
+        txtMaxQuantity = new javax.swing.JTextField();
+        jLabel7 = new javax.swing.JLabel();
         jPanel3 = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
         tbproduct = new javax.swing.JTable();
@@ -393,7 +582,7 @@ private void updateproduct(){
 
         jLabel2.setText("Category");
 
-        jLabel4.setText("quantity");
+        jLabel4.setText("quantity :");
 
         jLabel5.setText("Search");
 
@@ -401,23 +590,25 @@ private void updateproduct(){
 
         jLabel6.setText("sort");
 
-        jComboBox2.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+        cbcategory.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
 
-        jComboBox3.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
-
-        jCheckBox1.setText("Is active");
-        jCheckBox1.addActionListener(new java.awt.event.ActionListener() {
+        isActiveCheckBox.setText("Is active");
+        isActiveCheckBox.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jCheckBox1ActionPerformed(evt);
+                isActiveCheckBoxActionPerformed(evt);
             }
         });
 
-        jCheckBox2.setText("Is available");
-        jCheckBox2.addActionListener(new java.awt.event.ActionListener() {
+        isAvailableCheckBox.setText("Is available");
+        isAvailableCheckBox.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jCheckBox2ActionPerformed(evt);
+                isAvailableCheckBoxActionPerformed(evt);
             }
         });
+
+        jLabel3.setText("Low");
+
+        jLabel7.setText("High");
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
@@ -425,29 +616,35 @@ private void updateproduct(){
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addGap(31, 31, 31)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(jPanel2Layout.createSequentialGroup()
                         .addComponent(jLabel5)
                         .addGap(18, 18, 18)
                         .addComponent(txtsearch, javax.swing.GroupLayout.PREFERRED_SIZE, 323, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addGap(0, 0, Short.MAX_VALUE))
                     .addGroup(jPanel2Layout.createSequentialGroup()
                         .addComponent(jLabel2)
                         .addGap(18, 18, 18)
-                        .addComponent(jComboBox2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(cbcategory, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(50, 50, 50)
                         .addComponent(jLabel4)
-                        .addGap(18, 18, 18)
-                        .addComponent(jComboBox3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(52, 52, 52)
-                        .addComponent(jCheckBox1)
-                        .addGap(58, 58, 58)
-                        .addComponent(jCheckBox2)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 286, Short.MAX_VALUE)
-                        .addComponent(jLabel6)
-                        .addGap(18, 18, 18)
-                        .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(44, 44, 44))))
+                        .addGap(24, 24, 24)
+                        .addComponent(jLabel3)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(txtMinQuantity)))
+                .addGap(18, 18, 18)
+                .addComponent(jLabel7)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(txtMaxQuantity, javax.swing.GroupLayout.PREFERRED_SIZE, 92, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
+                .addComponent(isActiveCheckBox)
+                .addGap(40, 40, 40)
+                .addComponent(isAvailableCheckBox)
+                .addGap(107, 107, 107)
+                .addComponent(jLabel6)
+                .addGap(18, 18, 18)
+                .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(44, 44, 44))
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -462,10 +659,13 @@ private void updateproduct(){
                     .addComponent(jLabel2)
                     .addComponent(jLabel6)
                     .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jComboBox2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jComboBox3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jCheckBox2)
-                    .addComponent(jCheckBox1))
+                    .addComponent(cbcategory, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(isAvailableCheckBox)
+                    .addComponent(isActiveCheckBox)
+                    .addComponent(txtMinQuantity, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel3)
+                    .addComponent(txtMaxQuantity, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel7))
                 .addContainerGap(14, Short.MAX_VALUE))
         );
 
@@ -488,7 +688,7 @@ private void updateproduct(){
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane1)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 1036, Short.MAX_VALUE)
                 .addContainerGap())
         );
         jPanel3Layout.setVerticalGroup(
@@ -588,13 +788,13 @@ private void updateproduct(){
         deleteProduct();
     }//GEN-LAST:event_jButton1ActionPerformed
 
-    private void jCheckBox2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckBox2ActionPerformed
+    private void isAvailableCheckBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_isAvailableCheckBoxActionPerformed
         // TODO add your handling code here:
-    }//GEN-LAST:event_jCheckBox2ActionPerformed
+    }//GEN-LAST:event_isAvailableCheckBoxActionPerformed
 
-    private void jCheckBox1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckBox1ActionPerformed
+    private void isActiveCheckBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_isActiveCheckBoxActionPerformed
         // TODO add your handling code here:
-    }//GEN-LAST:event_jCheckBox1ActionPerformed
+    }//GEN-LAST:event_isActiveCheckBoxActionPerformed
 
     private void btnupdateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnupdateActionPerformed
         updateproduct();
@@ -604,23 +804,26 @@ private void updateproduct(){
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnupdate;
     private javax.swing.JButton btnview;
+    private javax.swing.JComboBox<String> cbcategory;
+    private javax.swing.JCheckBox isActiveCheckBox;
+    private javax.swing.JCheckBox isAvailableCheckBox;
     private javax.swing.JButton jButton1;
-    private javax.swing.JCheckBox jCheckBox1;
-    private javax.swing.JCheckBox jCheckBox2;
     private javax.swing.JComboBox<String> jComboBox1;
-    private javax.swing.JComboBox<String> jComboBox2;
-    private javax.swing.JComboBox<String> jComboBox3;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JSeparator jSeparator1;
     private javax.swing.JTable tbproduct;
+    private javax.swing.JTextField txtMaxQuantity;
+    private javax.swing.JTextField txtMinQuantity;
     private javax.swing.JTextField txtsearch;
     // End of variables declaration//GEN-END:variables
 }
